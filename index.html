@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+
+        .pop-up{
+            position: absolute;
+            border: 1px;
+            border-radius: 1px;
+            line-height: 1.2;
+            width: 300px;
+            pointer-events: none;
+            background-color: #ccc;
+            padding: 3px;
+        }
+
+        .headline{
+            text-align: left;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="map-container">
+        <h1 class="headline">
+            Children in Poverty: Counties Across the US
+        </h1>
+
+        <svg width="1050px" height="500px">
+
+        </svg>
+    </div>
+
+    <div class = "pop-up">
+
+    </div>
+</body>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+
+
+<!-- load topojson script -->
+<script src="https://unpkg.com/topojson@3"></script>
+
+
+<script>
+    console.log({d3})
+
+    Promise.all([
+        d3.json('state_topo.json'),
+    ])
+
+    .then(ready)
+    .catch((err) => {
+        console.log(err);
+    });
+
+    function ready(res) {
+        console.log(res[0])
+        let raw = res[0]
+        let data = topojson.feature(raw, raw.objects.cb_2018_us_state_20m)
+        let data_points = topojson.feature(raw, raw.objects.bubbles)
+        let width = 1050;
+        let height = 500;
+
+        let svg = d3.select("body").select("svg")
+
+        let myprojection = d3.geoAlbersUsa()
+            .fitSize([width, height], data)
+
+        let path = d3.geoPath()
+            .projection(myprojection)
+
+        svg.append("g")
+            .selectAll(".states")
+            .data(data.features)
+            .join("path")
+            .attr("d", path)
+            .style("fill", "#eee")
+            .style("stroke", "#333")
+            .style("stroke-width", 0.5)
+
+        points = svg.append("g")
+            .selectAll(".counties")
+            .data(data_points.features)
+            .join("circle")
+            // .attr("r", 5)
+            .attr("r", d => {
+                if(isNaN(path.centroid(d)[0])) {
+                    return 0
+                }
+                else {
+                    return d.properties.radius
+                }
+            })
+            .attr("cx", d => {
+                return path.centroid(d)[0]
+            })
+            .attr("cy", d => {
+                return path.centroid(d)[1]
+            })
+            .style("fill", "orange")
+            .style("stroke", "#ccc")
+            .style("stroke-width", 0.2)
+
+        let popup = d3.select(".pop-up");
+
+        points.on("mouseover", (event, d) => {
+            
+            console.log(event)
+
+            let text_blurb = "There are " + d.properties.pop_18_in_poverty + " children experiencing poverty in " + d.properties.Geo_NAME
+
+            popup
+                .style("left", (event.x - 100) + "px")
+                .style("top", (event.y - 75) + "px")
+                .html(text_blurb)
+        })
+    }
+
+    
+</script>
+</html>
